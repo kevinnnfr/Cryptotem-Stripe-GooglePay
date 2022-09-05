@@ -1,0 +1,32 @@
+PaymentIntent paymentIntent = stripeService.createCapturePaymentIntent(
+	userPayOrder.getFreezeAmount().multiply(new BigDecimal("100")).setScale(0).toString(),
+	oemProperties.getCurrency(), user.getStripeId(), paymentMethodId, userPayOrder.getDetail());
+
+
+/**
+ * createCapturePaymentIntent 创建预授权订单
+ */
+public PaymentIntent createCapturePaymentIntent(String amount, String currency, String customerId,
+		String paymentMethodId, String description) throws Exception {
+	Map<String, Object> params = new HashMap<>();
+	params.put("amount", amount);
+	params.put("currency", currency);
+	params.put("customer", customerId);
+	if (null != paymentMethodId) {
+		params.put("payment_method", paymentMethodId);
+	}
+	params.put("description", description);
+//		params.put("confirm", "true");
+	params.put("capture_method", "manual");
+	LoggerHelper.mdc("stripe", "createCapturePaymentIntent body ==> {}", JacksonUtils.toJson(params));
+	PaymentIntent paymentIntent = null;
+	try {
+		paymentIntent = PaymentIntent.create(params, requestOptions);
+	} catch (CardException e) {
+		LoggerHelper.mdc("stripe", "createCapturePaymentIntent error ==> {}: {}", e.getCode(), e.getMessage());
+		String paymentIntentId = e.getStripeError().getPaymentIntent().getId();
+		paymentIntent = PaymentIntent.retrieve(paymentIntentId, requestOptions);
+	}
+	LoggerHelper.mdc("stripe", "createCapturePaymentIntent result ==> {}", JSON.toJson(paymentIntent));
+	return paymentIntent;
+}
